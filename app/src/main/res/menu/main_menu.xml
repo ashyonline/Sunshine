@@ -8,6 +8,6 @@
         app:showAsAction="never" />
     <item
         android:id="@+id/action_location"
-        android:title="@string/view_location_action"
+        android:title="@string/action_settings"
         app:showAsAction="never" />
 </menu>
