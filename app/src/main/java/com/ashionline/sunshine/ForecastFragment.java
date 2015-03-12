@@ -98,10 +98,10 @@ public class ForecastFragment extends Fragment implements LoaderManager.LoaderCa
     }
 
     private void updateForecastData() {
-//        FetchWeatherTask task = new FetchWeatherTask();
-//        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(getActivity());
-//        String zipCode = sharedPref.getString(getActivity().getString(R.string.pref_location_key), getString(R.string.pref_location_default));
-//        task.execute(zipCode);
+        FetchWeatherTask task = new FetchWeatherTask(getActivity());
+        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(getActivity());
+        String zipCode = sharedPref.getString(getActivity().getString(R.string.pref_location_key), getString(R.string.pref_location_default));
+        task.execute(zipCode);
     }
 
     @Override
