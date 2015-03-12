@@ -1,7 +1,12 @@
 package com.ashionline.sunshine;
 
 import android.content.Intent;
-import android.support.v4.view.ActionProvider;
+import android.database.Cursor;
+import android.net.Uri;
+import android.support.annotation.Nullable;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.content.CursorLoader;
+import android.support.v4.content.Loader;
 import android.support.v4.view.MenuItemCompat;
 import android.support.v7.app.ActionBarActivity;
 import android.support.v4.app.Fragment;
@@ -15,6 +20,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 import android.support.v7.widget.ShareActionProvider;
+
+import com.ashionline.sunshine.data.WeatherContract;
 
 
 public class DetailActivity extends ActionBarActivity {
@@ -58,11 +65,12 @@ public class DetailActivity extends ActionBarActivity {
     /**
      * A placeholder fragment containing a simple view.
      */
-    public static class DetailFragment extends Fragment {
+    public static class DetailFragment extends Fragment implements LoaderManager.LoaderCallbacks<Cursor> {
 
         private static final String SUNSHINE_HASHTAG = "#Sunshine";
         private static final String LOG_TAG = DetailFragment.class.toString();
         private String forecastStr;
+        private TextView detail;
 
         public DetailFragment() {
             setHasOptionsMenu(true);
@@ -81,6 +89,12 @@ public class DetailActivity extends ActionBarActivity {
             super.onCreateOptionsMenu(menu, inflater);
         }
 
+        @Override
+        public void onActivityCreated(@Nullable Bundle savedInstanceState) {
+            getLoaderManager().initLoader(MainActivity.DETAIL_LOADER_ID, null, this);
+            super.onActivityCreated(savedInstanceState);
+        }
+
         private Intent prepareShareIntent() {
             Intent shareIntent = new Intent(Intent.ACTION_SEND);
             shareIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
@@ -93,14 +107,54 @@ public class DetailActivity extends ActionBarActivity {
         public View onCreateView(LayoutInflater inflater, ViewGroup container,
                                  Bundle savedInstanceState) {
             View rootView = inflater.inflate(R.layout.fragment_detail, container, false);
-            Intent forecastData = getActivity().getIntent();
-            if (forecastData != null && forecastData.hasExtra(Intent.EXTRA_TEXT)) {
-                TextView detail = (TextView) rootView.findViewById(R.id.detail);
-                forecastStr = forecastData.getStringExtra(Intent.EXTRA_TEXT);
-                detail.setText(forecastStr);
+            Intent intent = getActivity().getIntent();
+            if (intent != null) {
+                forecastStr = intent.getDataString();
             }
 
+            detail = (TextView) rootView.findViewById(R.id.detail);
+
             return rootView;
+        }
+
+        @Override
+        public Loader<Cursor> onCreateLoader(int i, Bundle bundle) {
+            return new CursorLoader(getActivity(), Uri.parse(forecastStr), ForecastFragment.FORECAST_COLUMNS, null, null, null);
+        }
+
+        @Override
+        public void onLoadFinished(Loader<Cursor> cursorLoader, Cursor cursor) {
+            if (detail != null)
+                detail.setText(convertCursorRowToUXFormat(cursor));
+        }
+
+        @Override
+        public void onLoaderReset(Loader<Cursor> cursorLoader) {
+
+        }
+
+        /**
+         * Prepare the weather high/lows for presentation.
+         */
+        private String formatHighLows(double high, double low) {
+            boolean isMetric = Utility.isMetric(this.getActivity());
+            String highLowStr = Utility.formatTemperature(high, isMetric) + "/" + Utility.formatTemperature(low, isMetric);
+            return highLowStr;
+        }
+
+        /*
+            This is ported from FetchWeatherTask --- but now we go straight from the cursor to the
+            string.
+         */
+        private String convertCursorRowToUXFormat(Cursor cursor) {
+            cursor.moveToFirst();
+            String highAndLow = formatHighLows(
+                    cursor.getDouble(ForecastFragment.COL_WEATHER_MAX_TEMP),
+                    cursor.getDouble(ForecastFragment.COL_WEATHER_MIN_TEMP));
+
+            return Utility.formatDate(cursor.getLong(ForecastFragment.COL_WEATHER_DATE)) +
+                    " - " + cursor.getString(ForecastFragment.COL_WEATHER_DESC) +
+                    " - " + highAndLow;
         }
     }
 }

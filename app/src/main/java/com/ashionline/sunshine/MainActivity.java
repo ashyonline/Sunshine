@@ -12,6 +12,8 @@ import android.view.MenuItem;
 
 
 public class MainActivity extends ActionBarActivity {
+    public static final int FORECAST_LOADER_ID = 1;
+    public static final int DETAIL_LOADER_ID = 2;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
