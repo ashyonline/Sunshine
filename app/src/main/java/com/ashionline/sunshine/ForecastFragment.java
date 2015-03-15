@@ -50,7 +50,7 @@ public class ForecastFragment extends Fragment implements LoaderManager.LoaderCa
             WeatherContract.LocationEntry.COLUMN_COORD_LAT,
             WeatherContract.LocationEntry.COLUMN_COORD_LONG
     };
-    // These indices are tied to FORECAST_COLUMNS.  If FORECAST_COLUMNS changes, these
+    // These indices are tied to DETAIL_COLUMNS.  If DETAIL_COLUMNS changes, these
     // must change.
     static final int COL_WEATHER_ID = 0;
     static final int COL_WEATHER_DATE = 1;
@@ -85,19 +85,13 @@ public class ForecastFragment extends Fragment implements LoaderManager.LoaderCa
         int id = item.getItemId();
         switch (id) {
             case R.id.refresh:
-                updateForecastData();
+                updateWeather();
                 break;
         }
         return super.onOptionsItemSelected(item);
     }
 
-    @Override
-    public void onStart() {
-        super.onStart();
-        updateForecastData();
-    }
-
-    private void updateForecastData() {
+    private void updateWeather() {
         FetchWeatherTask task = new FetchWeatherTask(getActivity());
         SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(getActivity());
         String zipCode = sharedPref.getString(getActivity().getString(R.string.pref_location_key), getString(R.string.pref_location_default));
@@ -148,6 +142,11 @@ public class ForecastFragment extends Fragment implements LoaderManager.LoaderCa
         // it must be converted to milliseconds in order to be converted to valid date.
         SimpleDateFormat shortenedDateFormat = new SimpleDateFormat("EEE MMM dd");
         return shortenedDateFormat.format(time);
+    }
+
+    public void onLocationChanged() {
+        updateWeather();
+        getLoaderManager().restartLoader(MainActivity.FORECAST_LOADER_ID, null, this);
     }
 
     /**
