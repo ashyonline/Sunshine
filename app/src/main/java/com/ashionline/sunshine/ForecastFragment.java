@@ -1,10 +1,14 @@
 package com.ashionline.sunshine;
 
+import android.app.AlarmManager;
+import android.app.PendingIntent;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.SystemClock;
 import android.preference.PreferenceManager;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
@@ -22,6 +26,7 @@ import android.widget.AdapterView;
 import android.widget.ListView;
 
 import com.ashionline.sunshine.data.WeatherContract;
+import com.ashionline.sunshine.sync.SunshineSyncAdapter;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -64,7 +69,11 @@ public class ForecastFragment extends Fragment implements LoaderManager.LoaderCa
 
 
     private static final String LOG_TAG = ForecastFragment.class.getSimpleName();
-    private ForecastAdapter forecastAdapter;
+    private static final String SELECTED_POSITION = "selected_position";
+    private ForecastAdapter mForecastAdapter;
+    private int mSelectedPosition = -1;
+    private ListView mForecastList;
+    private boolean mUseTodayLayout;
 
     public ForecastFragment() {
     }
@@ -92,40 +101,50 @@ public class ForecastFragment extends Fragment implements LoaderManager.LoaderCa
     }
 
     private void updateWeather() {
-        FetchWeatherTask task = new FetchWeatherTask(getActivity());
-        SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(getActivity());
-        String zipCode = sharedPref.getString(getActivity().getString(R.string.pref_location_key), getString(R.string.pref_location_default));
-        task.execute(zipCode);
+        SunshineSyncAdapter.syncImmediately(getActivity());
+        /*
+        AlarmManager alarmManager = (AlarmManager)getActivity().getSystemService(Context.ALARM_SERVICE);
+        Intent alarmServiceIntent = new Intent(getActivity(), SunshineService.AlarmReceiver.class);
+        alarmServiceIntent.putExtra(SunshineService.LOCATION_QUERY_EXTRA, Utility.getPreferredLocation(getActivity()));
+        PendingIntent alarmPendingIntent = PendingIntent.getBroadcast(getActivity(), 0, alarmServiceIntent, PendingIntent.FLAG_ONE_SHOT);
+        alarmManager.set(AlarmManager.RTC_WAKEUP,
+                System.currentTimeMillis() + 5000, alarmPendingIntent);
+                */
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        forecastAdapter = new ForecastAdapter(getActivity(), null, 0);
+        mForecastAdapter = new ForecastAdapter(getActivity(), null, 0);
         View rootView = inflater.inflate(R.layout.main_fragment, container, false);
 
+        mForecastAdapter.setUseTodayLayout(mUseTodayLayout);
         // Get a reference to the ListView, and attach this adapter to it.
-        ListView listView = (ListView) rootView.findViewById(R.id.listview_forecast);
-        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+        mForecastList = (ListView) rootView.findViewById(R.id.listview_forecast);
+        if (savedInstanceState != null) {
+            mSelectedPosition = savedInstanceState.getInt(SELECTED_POSITION, -1);
+        }
+        mForecastList.setOnItemClickListener(new AdapterView.OnItemClickListener() {
 
             @Override
             public void onItemClick(AdapterView adapterView, View view, int position, long l) {
-                // CursorAdapter returns a cursor at the correct position for getItem(), or null
-                // if it cannot seek to that position.
+                mSelectedPosition = position;
                 Cursor cursor = (Cursor) adapterView.getItemAtPosition(position);
                 if (cursor != null) {
-                    String locationSetting = Utility.getPreferredLocation(getActivity());
-                    Intent intent = new Intent(getActivity(), DetailActivity.class)
-                            .setData(WeatherContract.WeatherEntry.buildWeatherLocationWithDate(
-                                    locationSetting, cursor.getLong(COL_WEATHER_DATE)
-                            ));
-                    startActivity(intent);
+                    Uri uri = WeatherContract.WeatherEntry.buildWeatherLocationWithDate(Utility.getPreferredLocation(getActivity()), cursor.getLong(COL_WEATHER_DATE));
+                    ((Callback) getActivity()).onItemSelected(uri);
                 }
             }
         });
 
-        listView.setAdapter(forecastAdapter);
+        mForecastList.setAdapter(mForecastAdapter);
         return rootView;
+    }
+
+    @Override
+    public void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putInt(SELECTED_POSITION, mSelectedPosition);
     }
 
     @Override
@@ -262,11 +281,22 @@ public class ForecastFragment extends Fragment implements LoaderManager.LoaderCa
 
     @Override
     public void onLoadFinished(Loader<Cursor> cursorLoader, Cursor cursor) {
-        forecastAdapter.swapCursor(cursor);
+        mForecastAdapter.swapCursor(cursor);
+        if (mSelectedPosition != -1) {
+            mForecastList.smoothScrollToPosition(mSelectedPosition);
+        }
     }
 
     @Override
     public void onLoaderReset(Loader<Cursor> cursorLoader) {
-        forecastAdapter.swapCursor(null);
+        mForecastAdapter.swapCursor(null);
+    }
+
+    public void setUseTodayLayout(boolean useTodayLayout) {
+        if (mForecastAdapter != null) {
+            mForecastAdapter.setUseTodayLayout(useTodayLayout);
+        }
+
+        mUseTodayLayout = useTodayLayout;
     }
 }

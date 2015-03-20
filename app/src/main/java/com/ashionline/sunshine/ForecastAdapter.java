@@ -18,6 +18,7 @@ import com.ashionline.sunshine.data.WeatherContract;
 public class ForecastAdapter extends CursorAdapter {
     private static final int VIEW_TYPE_TODAY = 0;
     private static final int VIEW_TYPE_FUTURE_DAY = 1;
+    private boolean mUseTodayLayout;
 
     public ForecastAdapter(Context context, Cursor c, int flags) {
         super(context, c, flags);
@@ -32,6 +33,10 @@ public class ForecastAdapter extends CursorAdapter {
         return highLowStr;
     }
 
+    public void setUseTodayLayout(boolean useTodayLayout) {
+        mUseTodayLayout = useTodayLayout;
+    }
+
     @Override
     public int getViewTypeCount() {
         return 2;
@@ -39,7 +44,7 @@ public class ForecastAdapter extends CursorAdapter {
 
     @Override
     public int getItemViewType(int position) {
-        return position == 0 ? VIEW_TYPE_TODAY : VIEW_TYPE_FUTURE_DAY;
+        return position == 0 && mUseTodayLayout ? VIEW_TYPE_TODAY : VIEW_TYPE_FUTURE_DAY;
     }
 
     /*
@@ -86,13 +91,16 @@ public class ForecastAdapter extends CursorAdapter {
         ViewHolder holder = (ViewHolder) view.getTag();
 
         // Read weather icon ID from cursor
-        int weatherId = cursor.getInt(ForecastFragment.COL_WEATHER_ID);
-        // Use placeholder image for now
-        holder.iconView.setImageResource(R.drawable.ic_launcher);
+        int weatherId = cursor.getInt(ForecastFragment.COL_WEATHER_CONDITION_ID);
+        int type = getItemViewType(cursor.getPosition());
+        if (VIEW_TYPE_TODAY == type) {
+            holder.iconView.setImageResource(Utility.getArtResourceForWeatherCondition(weatherId));
+        } else {
+            holder.iconView.setImageResource(Utility.getIconResourceForWeatherCondition(weatherId));
+        }
 
         // TODO Read date from cursor
         long dateValue = cursor.getLong(ForecastFragment.COL_WEATHER_DATE);
-        TextView date = (TextView) view.findViewById(R.id.list_item_date_textview);
         holder.dateTextView.setText(Utility.formatDate(dateValue));
 
         // TODO Read weather forecast from cursor
