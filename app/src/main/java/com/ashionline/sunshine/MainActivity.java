@@ -114,25 +114,9 @@ public class MainActivity extends ActionBarActivity implements Callback {
                 Intent startSettings = new Intent(this, SettingsActivity.class);
                 startActivity(startSettings);
                 return true;
-            case R.id.action_location:
-                SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
-                String zipCode = sharedPref.getString(getString(R.string.pref_location_key), getString(R.string.pref_location_default));
-                Uri.Builder uriBuilder = Uri.parse("geo:0,0?").buildUpon()
-                        .appendQueryParameter("q", zipCode);
-
-                showMap(uriBuilder.build());
-                return true;
         }
 
         return super.onOptionsItemSelected(item);
-    }
-
-    public void showMap(Uri geoLocation) {
-        Intent intent = new Intent(Intent.ACTION_VIEW);
-        intent.setData(geoLocation);
-        if (intent.resolveActivity(getPackageManager()) != null) {
-            startActivity(intent);
-        }
     }
 
     protected DetailFragment newDetailFragment(Uri uri) {
